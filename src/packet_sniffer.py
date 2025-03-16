@@ -1,7 +1,9 @@
 import socket
+# from scapy.all import sniff
+import 
+def PacketSniffing() -> bytes:
+    packets = sniff(count=1)  # Capture only 1 packet
+    print(packets[0])
+    return packets[0]
 
-def start_sniffing(callback):
-    conn = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(3))
-    while True:
-        raw_data, addr = conn.recvfrom(65535)
-        callback(raw_data)
+        
