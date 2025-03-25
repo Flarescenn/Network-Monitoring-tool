@@ -3,12 +3,14 @@
 #include <vector>
 #include <stdexcept>
 #include <iostream>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 //list_adapters --
 //open_connection --
 //fetch_packet --
 //close_connection --
 //filter_packets  --
-
+namespace py = pybind11;
 class npcap_wrapper{
 private:
     pcap_t* handle;
@@ -90,7 +92,7 @@ public:
         uint32_t length;
         std::vector<uint8_t> data;
     };
-    packet_info fetch_packets(){
+    packet_info fetch_packet(){
         if (!handle){
             throw std::runtime_error("No interface open!");
         }
@@ -133,5 +135,27 @@ public:
         return true;
     }
     //capture-loop for efficiency and reducing Python-C++ comm. overhead
+    void fetch_loop(){
 
+     }
 };
+// Python Bindings
+PYBIND11_MODULE(npcap_wrapper, m) {
+    py::class_<npcap_wrapper>(m, "npcap_wrapper")
+        .def(py::init<>())
+        .def("list_interfaces", &npcap_wrapper::list_interfaces)
+        .def("open_connection", &npcap_wrapper::open_connection)
+        .def("close_connection", &npcap_wrapper::close_connection)
+        .def("fetch_packets", &npcap_wrapper::fetch_packets)
+        .def("filter_packets", &npcap_wrapper::filter_packets);
+
+    py::class_<npcap_wrapper::interface_info>(m, "interface_info")
+        .def_readwrite("name", &npcap_wrapper::interface_info::name)
+        .def_readwrite("desc", &npcap_wrapper::interface_info::desc)
+        .def_readwrite("addr", &npcap_wrapper::interface_info::addr);
+
+    py::class_<npcap_wrapper::packet_info>(m, "packet_info")
+        .def_readwrite("timestamp", &npcap_wrapper::packet_info::timestamp)
+        .def_readwrite("length", &npcap_wrapper::packet_info::length)
+        .def_readwrite("data", &npcap_wrapper::packet_info::data);
+}
