@@ -113,7 +113,21 @@ bool npcap_wrapper::filter_packets(const std::string filter){
     pcap_freecode(&fp);
     return true;
 }
-//capture-loop for efficiency and reducing Python-C++ comm. overhead
+
+void npcap_wrapper::packet_handler(u_char* user, const struct pcap_pkthdr* header, const u_char* pkt_data){
+    auto* instance = reinterpret_cast<npcap_wrapper*>(user);
+    packet_info info;
+    info.timestamp = header->ts.tv_sec;
+    info.length = header->caplen;
+    info.data = std::vector<uint8_t>(pkt_data, pkt_data + header->caplen); //pkt_data points to the beginning of the packet's data
+
+    if (instance->user_callback){
+        instance->user_callback(info);  //if callback exists, perform callback
+    } else {
+        //add to vector
+    }
+}
+//capture-loop for efficiency and reducing Python-C++ delays
 void npcap_wrapper::fetch_loop(){
  }
 
