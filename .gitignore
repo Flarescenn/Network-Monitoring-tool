@@ -6,3 +6,4 @@ compile.bat
 build/
 CMakeLists.txt
 #/wrapper/test_wrapper.cpp
+test_wrapper.exe

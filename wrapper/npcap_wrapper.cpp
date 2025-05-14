@@ -94,7 +94,7 @@ npcap_wrapper::packet_info npcap_wrapper::fetch_packet(){
     }
 }
 //filter_packets
-bool npcap_wrapper::filter_packets(const std::string filter){
+bool npcap_wrapper::filter_packets(const std::string& filter){
     if (!handle){
         throw std::runtime_error("No interface open!");
     }
@@ -114,22 +114,68 @@ bool npcap_wrapper::filter_packets(const std::string filter){
     return true;
 }
 
-void npcap_wrapper::packet_handler(u_char* user, const struct pcap_pkthdr* header, const u_char* pkt_data){
-    auto* instance = reinterpret_cast<npcap_wrapper*>(user);
+//static handler
+void npcap_wrapper::pcap_packet_handler(u_char* user_data, const struct pcap_pkthdr* header, const u_char* pkt_data) {
+    npcap_wrapper* instance = reinterpret_cast<npcap_wrapper*>(user_data);
+    if (instance){
+        instance->process_packet(header, pkt_data);
+    }
+}
+
+void npcap_wrapper::process_packet(const struct pcap_pkthdr* header, const u_char* pkt_data){
+    if (!capture_running) return; //return if no capturing
     packet_info info;
     info.timestamp = header->ts.tv_sec;
     info.length = header->caplen;
-    info.data = std::vector<uint8_t>(pkt_data, pkt_data + header->caplen); //pkt_data points to the beginning of the packet's data
+    
+    std::lock_guard<std::mutex> lock(queue_mutex);
+    packet_queue.push_back(std::move(info));
+}
 
-    if (instance->user_callback){
-        instance->user_callback(info);  //if callback exists, perform callback
-    } else {
-        //add to vector
+void npcap_wrapper::start_capture_loop(){
+    if (!handle) throw std::runtime_error("No interfaces are open!");
+    if (capture_running) std::cout << "The capture loop is already running" <<  std::endl;
+    
+    capture_running = true;
+    
+    capture_thread = std::thread([this](){
+        // this thread would be blocked by the pcap_loop till breakloop
+        int pcap_result  = pcap_loop(handle, -1, pcap_packet_handler, reinterpret_cast<u_char*>(this));
+        //after pcap_loop returns
+        capture_running = false;
+        if (pcap_result == -1){
+            std::cerr << "pcap loop error: " << pcap_geterr(handle) << std::endl;
+        } else if (pcap_result == -2){
+            std::cout << "The loop was terminated by pcap_breakloop." << std::endl;
+        } else {
+            std::cout << "Captured packets: " << pcap_result << std::endl;
+        }
+    });
+    std::cout << "Capture loop started." << std::endl;
+}
+
+void npcap_wrapper::stop_capture_loop() {
+    if (capture_running && handle) {
+        capture_running = false; // Signal handler to stop processing new packets
+                                   
+        pcap_breakloop(handle);    
+    }
+
+    if (capture_thread.joinable()) {
+        capture_thread.join(); // Wait for the capture thread to finish
+        std::cout << "Capture thread joined." << std::endl;
     }
 }
-//capture-loop for efficiency and reducing Python-C++ delays
-void npcap_wrapper::fetch_loop(){
- }
+
+std::vector<npcap_wrapper::packet_info> npcap_wrapper::get_queued_packets() {
+    std::vector<packet_info> packets_to_return;
+    std::lock_guard<std::mutex> lock(queue_mutex); 
+    if (!packet_queue.empty()) {
+        packets_to_return.swap(packet_queue); // Efficiently move all packets
+                                              // packet_queue is now empty
+    }
+    return packets_to_return;
+}
 
 // Python Bindings
 // PYBIND11_MODULE(npcap_wrapper, m) {
