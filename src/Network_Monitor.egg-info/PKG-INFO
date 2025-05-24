@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: Network_Monitor
+Version: 0.1
+Summary: Python Network Monitoring tool with Npcap wrapper
+Author: flarescenn
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: C++
+Classifier: Operating System :: Microsoft :: Windows
+Requires-Python: >=3.7
+Dynamic: author
+Dynamic: classifier
+Dynamic: requires-python
+Dynamic: summary

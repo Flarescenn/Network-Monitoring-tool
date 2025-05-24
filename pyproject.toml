@@ -1,0 +1,8 @@
+[build-system]
+requires = [
+    "setuptools>=42",    # A reasonably modern version of setuptools
+    "wheel",             # For building wheels
+    "pybind11>=2.6.0"    # Or your desired minimum version of pybind11
+]
+build-backend = "setuptools.build_meta"
+#backend-path = ["."]

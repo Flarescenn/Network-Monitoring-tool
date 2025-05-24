@@ -1,9 +1,13 @@
-import socket
-# from scapy.all import sniff
-import 
-def PacketSniffing() -> bytes:
-    packets = sniff(count=1)  # Capture only 1 packet
-    print(packets[0])
-    return packets[0]
+import npcap_module
+import numpy as np
+import time
+import datetime
+
+def print_packet(packet):
+    print(f"Packet Timestamp: {datetime.datetime.fromtimestamp(packet.timestamp)}")
+    print(f"Packet Length: {packet.length} bytes")
+    print(f"Packet Data: {packet.data.hex()}")
+    print("-" * 40)
+
 
         
