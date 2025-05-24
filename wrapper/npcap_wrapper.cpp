@@ -6,11 +6,7 @@
 #include "npcap_wrapper.h"
 // #include <pybind11/pybind11.h>
 // #include <pybind11/stl.h>
-//list_adapters --
-//open_connection --
-//fetch_packet --
-//close_connection --
-//filter_packets  --
+
 // namespace py = pybind11;
 
 npcap_wrapper::npcap_wrapper(){
@@ -127,9 +123,13 @@ void npcap_wrapper::process_packet(const struct pcap_pkthdr* header, const u_cha
     packet_info info;
     info.timestamp = header->ts.tv_sec;
     info.length = header->caplen;
-    
+    info.data.assign(pkt_data, pkt_data + header->caplen);  //.assign(begin*, end*) --> end = begin + capturelength
+
     std::lock_guard<std::mutex> lock(queue_mutex);
-    packet_queue.push_back(std::move(info));
+    if (capture_running){
+        packet_queue.push_back(std::move(info));
+    }
+    
 }
 
 void npcap_wrapper::start_capture_loop(){
@@ -176,24 +176,3 @@ std::vector<npcap_wrapper::packet_info> npcap_wrapper::get_queued_packets() {
     }
     return packets_to_return;
 }
-
-// Python Bindings
-// PYBIND11_MODULE(npcap_wrapper, m) {
-//     py::class_<npcap_wrapper>(m, "npcap_wrapper")
-//         .def(py::init<>())
-//         .def("list_interfaces", &npcap_wrapper::list_interfaces)
-//         .def("open_connection", &npcap_wrapper::open_connection)
-//         .def("close_connection", &npcap_wrapper::close_connection)
-//         .def("fetch_packets", &npcap_wrapper::fetch_packets)
-//         .def("filter_packets", &npcap_wrapper::filter_packets);
-
-//     py::class_<npcap_wrapper::interface_info>(m, "interface_info")
-//         .def_readwrite("name", &npcap_wrapper::interface_info::name)
-//         .def_readwrite("desc", &npcap_wrapper::interface_info::desc)
-//         .def_readwrite("addr", &npcap_wrapper::interface_info::addr);
-
-//     py::class_<npcap_wrapper::packet_info>(m, "packet_info")
-//         .def_readwrite("timestamp", &npcap_wrapper::packet_info::timestamp)
-//         .def_readwrite("length", &npcap_wrapper::packet_info::length)
-//         .def_readwrite("data", &npcap_wrapper::packet_info::data);
-// }
