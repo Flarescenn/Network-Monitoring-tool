@@ -1,0 +1,8 @@
+# parsers/common.py (example content)
+ETH_TYPE_IPV4 = 0x0800
+ETH_TYPE_ARP  = 0x0806
+ETH_TYPE_IPV6 = 0x86DD
+
+IP_PROTO_ICMP = 1
+IP_PROTO_TCP  = 6
+IP_PROTO_UDP  = 17

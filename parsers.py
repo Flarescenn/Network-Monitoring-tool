@@ -33,14 +33,6 @@ class IPv4Packet:
         self._parse_header()
     
     def _parse_header(self):
-        # self.version = (self.header[0] >> 4) & 0x0F
-        # #self.ihl = self.header[0] & 0x0F
-        # self.tos = self.header[1]
-        # self.total_length = struct.unpack('!H', self.header[2:4])[0]
-        # self.identification = struct.unpack('!H', self.header[4:6])[0]
-        # self.flags = (self.header[6] >> 5) & 0x07
-        # self.fragment_offset = ((self.header[6] & 0x1F) << 8) | self.header[7]
-
         # We already have the first byte, so we skip it
         # !B - unsigned char (1 byte)
         # !H - unsigned short (2 bytes)

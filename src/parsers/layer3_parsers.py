@@ -15,14 +15,6 @@ class IPv4Packet:
         self._parse_header()
     
     def _parse_header(self):
-        # self.version = (self.header[0] >> 4) & 0x0F
-        # #self.ihl = self.header[0] & 0x0F
-        # self.tos = self.header[1]
-        # self.total_length = struct.unpack('!H', self.header[2:4])[0]
-        # self.identification = struct.unpack('!H', self.header[4:6])[0]
-        # self.flags = (self.header[6] >> 5) & 0x07
-        # self.fragment_offset = ((self.header[6] & 0x1F) << 8) | self.header[7]
-
         # We already have the first byte, so we skip it
         # !B - unsigned char (1 byte)
         # !H - unsigned short (2 bytes)
@@ -56,4 +48,46 @@ class IPv4Packet:
                 f"  Destination IP: {self.dest_ip}\n"
                 f"  Options Length: {len(self.options)} bytes\n"
                 f"  Payload Length: {len(self.payload)} bytes")
+    
+
+class ICMPPacket:
+    def __init__(self, data: bytes):
+        if len(data) < 4:
+            raise ValueError("Data is too short to be a valid ICMP packet.")
         
+        self.type, self.code, self.checksum = struct.unpack('!BBH', data[:4])
+        self.rest_of_header = data[4:8] 
+        self.payload = data[8:]
+
+        if self.type == 8 and self.code == 0:
+            self.identifier, self.sequence = struct.unpack('!HH', self.rest_of_header)
+            self.description = "Echo Request"
+
+        elif self.type == 0 and self.code == 0:
+            self.identifier, self.sequence = struct.unpack('!HH', self.rest_of_header)
+            self.description = "Echo Reply"
+
+        elif self.type == 3:
+            self.description = f"Destination Unreachable. Code: {self.code}"
+
+        elif self.type == 11:
+            self.description = f"Time Exceeded. Code: {self.code}"
+
+        else:
+            self.description = f"Type: {self.type}, Code: {self.code}"
+            self.identifier = None
+            self.sequence_number = None
+        
+
+    def __str__(self) -> str:
+        s  =(f"ICMP Packet:\n"
+                f"  Type: {self.type}\n"
+                f"  Code: {self.code}\n"
+                f"  Checksum: {self.checksum:#06x}\n")
+        if self.identifier is not None and self.sequence is not None:
+            s += f"  Identifier: {self.identifier}\n"
+            s += f"  Sequence Number: {self.sequence}\n"
+        if self.payload:
+            s += f"  Payload Length: {len(self.payload)} bytes\n"
+            s += f"  Payload Data: {self.payload.hex()}\n"
+        return s + f"  Description: {self.description}\n"

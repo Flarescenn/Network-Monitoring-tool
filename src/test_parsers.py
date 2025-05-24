@@ -1,20 +1,21 @@
 import npcap_module
 import datetime
 import time
-from parsers.ethernet import EthernetFrame
-from parsers.layer3_parsers import IPv4Packet
+from parsers.layer2_parsers import EthernetFrame, ARPMessage
+from parsers.layer3_parsers import IPv4Packet, ICMPPacket
 from parsers.layer4_parsers import TCPSegment, UDPDatagram
 
-ETH_TYPE_IP = 0x0800  # Ethertype for IPv4
-IP_PROTO_TCP  = 6
-IP_PROTO_UDP  = 17
 
-
-PROTOCOL_PARSERS = {
+ETH_PARSERS = {
     # 1: ICMPPacket,
     0x0800: IPv4Packet,      
-    6: TCPSegment,    
-    17: UDPDatagram,     
+    0x0806: ARPMessage,
+    #0x86DD: None,  # Placeholder for IPv6, not implemented     
+}
+PROTOCOL_PARSERS = {
+    6: TCPSegment,
+    17: UDPDatagram,
+    1: ICMPPacket,  # ICMP is a Layer 3 protocol
 }
 
 def print_packet(packet):
@@ -35,7 +36,7 @@ def fetch_packet():
     choice = int(input("Select an interface: "))
     sniffer.open_connection(interfaces[choice - 1].name)
     print("Listening for packets...")
-    # sniffer.filter_packets("icmp")  # Filter for IP packets
+    sniffer.filter_packets("icmp")  # Filter for IP packets
     packet = sniffer.fetch_packet()
     while not packet.length > 0:
         time.sleep(1)  
@@ -48,14 +49,27 @@ def fetch_packet():
 def test():
     p1 = fetch_packet()
     print_packet(p1)
-    eth_frame = EthernetFrame(p1.data)
-    print(eth_frame)
-    if eth_frame.ethertype in PROTOCOL_PARSERS:
-        layer3_parser = PROTOCOL_PARSERS[eth_frame.ethertype]
-        layer3_packet = layer3_parser(eth_frame.payload)
-        print(layer3_packet)
+    try:
+        eth_frame = EthernetFrame(p1.data)
+        print(eth_frame)
+    except ValueError as e:
+        print(f"Error parsing Ethernet frame: {e}")
+        return
+    
+    layer3_packet = None
+    if eth_frame.ethertype in ETH_PARSERS:
+        layer3_parser = ETH_PARSERS[eth_frame.ethertype]
+        try:
+            layer3_packet = layer3_parser(eth_frame.payload)
+            print(layer3_packet)
+        except ValueError as e:
+            print(f"Error parsing Layer 3 packet: {e}")
+            return
     else:
         print(f"Unsupported protocol: {hex(eth_frame.ethertype)}")
+    if isinstance(layer3_packet, ARPMessage):
+        print("Captured an ARP message, skipping Layer 4 parsing.")
+        return
     if layer3_packet.protocol in PROTOCOL_PARSERS:
         layer4_parser = PROTOCOL_PARSERS[layer3_packet.protocol]
         layer4_packet = layer4_parser(layer3_packet.payload)
