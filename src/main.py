@@ -5,7 +5,7 @@
 import argparse
 import sys
 import signal
-from packet_sniffer import PacketSniffing
+from parsers import PacketSniffing
 from parsers import ethernet
 
 def signal_handler(sig, frame):
