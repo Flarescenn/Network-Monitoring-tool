@@ -1,5 +1,16 @@
 import struct
+from parsers.constants import ETH_TYPE_VLAN
 
+class VlanTag:
+    def __init__(self, tci_bytes: bytes):
+        tci_value = struct.unpack('!H', tci_bytes)[0]
+        self.pcp = (tci_value >> 13) & 0x07
+        self.dei = (tci_value >> 12) & 0x01
+        self.vid = tci_value & 0x0FFF
+
+    def __str__(self):
+        return f"PCP: {self.pcp}, DEI: {self.dei}, VID: {self.vid}"
+    
 class EthernetFrame:
     def __init__(self, data: bytes):
         if len(data) < 14:
@@ -7,10 +18,28 @@ class EthernetFrame:
         self.destination_mac = data[0:6]
         self.source_mac = data[6:12]
         self.ethertype = struct.unpack('!H', data[12:14])[0]    # Big-endian format
-        self.payload = data[14:]
+        self.vlan_tag = VlanTag | None
+        if self.ethertype== ETH_TYPE_VLAN:
+            if len(data) < 18:
+                raise ValueError("Data is too short to contain VLAN tag.")
+            self.vlan_tag = VlanTag(data[14:16])
+            self.final_ethertype = struct.unpack('!H', data[16:18])[0]
+            self.payload = data[18:]
+        else:
+            self.final_ethertype = self.ethertype
+            self.payload = data[14:]
 
     def __str__(self) -> str:
-        return f"Ethernet Frame:\n  Destination MAC: {self.destination_mac.hex(':')}\n  Source MAC: {self.source_mac.hex(':')}\n  Ethertype: {hex(self.ethertype)}\n  Payload Length: {len(self.payload)} bytes"
+        s = f"Ethernet Frame:\n  Destination MAC: {self.destination_mac.hex(':')}\n Source MAC: {self.source_mac.hex(':')}\n"
+        if self.vlan_tag:
+            s += f"  VLAN Tag: {self.vlan_tag}\n"
+            s += f" TPID (EtherType): {hex(self.ethertype)}\n"
+            s += f"  Final Ethertype: {hex(self.final_ethertype)}\n"
+        else:
+            s += f"  Ethertype: {hex(self.final_ethertype)}\n "
+        s += f"  Payload Length: {len(self.payload)} bytes"
+        return s
+
  
     
 class ARPMessage:

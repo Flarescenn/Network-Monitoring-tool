@@ -1,8 +1,5 @@
 import struct
 
-
-ETH_TYPE_IP = 0x0800  # Ethertype for IPv4
-
 class IPv4Packet:
     def __init__(self, data: bytes):
         if len(data) < 20:

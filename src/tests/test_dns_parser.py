@@ -6,12 +6,12 @@ import npcap_module
 import time
 
 from parsers.layer2_parsers import EthernetFrame, ARPMessage
-from parsers.layer3_parsers import IPv4Packet, ICMPPacket
+from parsers.ip4 import IPv4Packet, ICMPPacket
 from parsers.layer4_parsers import TCPSegment, UDPDatagram
 from parsers.dns_parser import DNSPacket
 from parsers.ip6 import IPv6Packet  
 
-from parsers.init import (
+from parsers import (
     ETH_TYPE_IPV4, ETH_TYPE_ARP, ETH_TYPE_VLAN, ETH_TYPE_IPV6,  IP_PROTO_TCP, IP_PROTO_UDP, IP_PROTO_ICMP, 
 )
 

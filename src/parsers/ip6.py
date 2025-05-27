@@ -1,6 +1,6 @@
 import socket
 import struct
-from parsers.init import (
+from parsers.constants import (
     ETH_TYPE_IPV6, IP_PROTO_TCP, IP_PROTO_UDP, IP_PROTO_ICMP, IP_PROTO_ICMPV6
 )
 class IPv6Packet:

@@ -4,7 +4,7 @@ import time
 import socket
 import struct
 from parsers.layer2_parsers import EthernetFrame, ARPMessage
-from parsers.layer3_parsers import IPv4Packet, ICMPPacket
+from parsers.ip4 import IPv4Packet, ICMPPacket
 from parsers.layer4_parsers import TCPSegment, UDPDatagram
 from parsers.dns_parser import DNSPacket
 ETH_TYPE_IPv6 = 0x86dd

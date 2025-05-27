@@ -7,3 +7,4 @@ build/
 CMakeLists.txt
 #/wrapper/test_wrapper.cpp
 test_wrapper.exe
+src/analysis/geolite_databases
