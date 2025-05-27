@@ -1,13 +1,9 @@
-# src/my_tool_package/main_app_logic.py
+
 import time
-import npcap_module # Your C++ wrapper
+import npcap_module 
 from protocol_stack import ProtocolStack
 from analysis.top_talkers import TrafficInsights
-# from .analysis.geoip_lookup import GeoIPLookup # When you create this
-# from .utils.ip_utils import ReverseDNSCache # When you create this
 
-# (Your sniffer setup and packet fetching functions)
-# ... setup_sniffer_once(), fetch_next_packet(sniffer) from previous examples ...
 sniffer_instance = None
 
 def setup_sniffer():
@@ -47,15 +43,15 @@ def fetch_next_packet(sniffer):
         packet = sniffer.fetch_packet()
     return packet
 
-def run_capture_and_analysis(duration_seconds=30):
+def capture_and_analysis(duration_seconds=30):
     global sniffer_instance # From sniffer setup
     sniffer = setup_sniffer()
     if not sniffer:
         return
 
     analyzer = TrafficInsights()
-    # geo_lookup = GeoIPLookup() # Initialize when ready
-    # rDNS_cache = ReverseDNSCache() # Initialize when ready
+    # geo_lookup = GeoIPLookup() 
+    # rDNS_cache = ReverseDNSResolver() 
 
     print(f"Starting capture for {duration_seconds} seconds...")
     start_time = time.monotonic()
@@ -75,15 +71,6 @@ def run_capture_and_analysis(duration_seconds=30):
             
             # --- Live Output (Optional) ---
             print(f"\rPackets Processed: {analyzer.packet_count}, Last: {parsed_packet.summary[:100]}", end="")
-
-
-            # --- Example: Resolve GeoIP/rDNS for newly seen IPs (can be slow) ---
-            # if parsed_packet.network_layer and isinstance(parsed_packet.network_layer, (IPv4Packet, IPv6Packet)):
-            #     src_ip = parsed_packet.network_layer.src_ip
-            #     dest_ip = parsed_packet.network_layer.dest_ip
-                # geo_src = geo_lookup.get_country(src_ip)
-                # rDNS_src = rDNS_cache.get_hostname(src_ip)
-                # print(f"Src: {src_ip} ({rDNS_src}, {geo_src})")
 
     except KeyboardInterrupt:
         print("\nCapture interrupted by user.")
@@ -111,12 +98,8 @@ def run_capture_and_analysis(duration_seconds=30):
     for proto, count in summary_stats['transport_protocols'].items():
         print(f"  {proto}: {count} packets")
 
-    # The captured_packets_list now holds all ParsedPacket objects.
-    # This list would be the source for your Flask API to serve to React.
-    # For example, you could dump it to JSON, or store it in a more persistent way.
     print(f"\nStored {len(captured_packets)} parsed packets for potential UI display.")
 
 
 if __name__ == "__main__":
-    # You might want to add arguments for interface selection, duration, etc.
-    run_capture_and_analysis(duration_seconds=20)
+    capture_and_analysis(duration_seconds=20)
