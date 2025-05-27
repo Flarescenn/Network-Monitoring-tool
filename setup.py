@@ -34,8 +34,8 @@ setup(
     version='0.1',
     author='flarescenn',
     description='Python Network Monitoring tool with Npcap wrapper',
-    packages=find_packages(where='src'), # Tells setuptools to find Python packages in src/
-    package_dir={'': 'src'}, # Tells setuptools that the root package is in src/
+    packages=find_packages(where='src'), 
+    package_dir={'': 'src'}, 
     ext_modules=ext_modules,
     python_requires='>=3.7',
     install_requires=[

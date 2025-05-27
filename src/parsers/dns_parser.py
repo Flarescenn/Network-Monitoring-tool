@@ -11,14 +11,15 @@ class DNSQuery:
     
 
 class DNSResourceRecord:
-    def __init__(self, name, rtype, rclass, ttl, rdlength, rdata_raw):
+    def __init__(self, name, rtype, rclass, ttl, rdlength, rdata_raw, full_dns_packet):
         self.name = name
         self.rtype = rtype
         self.rclass = rclass
         self.ttl = ttl
         self.rdlength = rdlength
         self.rdata_raw = rdata_raw
-        self.rdata = self._parse_rdata(rtype, rdata_raw)
+        self.full_dns_packet = full_dns_packet
+        self.rdata = self._parse_rdata()
 
     def _parse_rdata(self)-> str:
         if self.rtype == 1 and self.rclass == 1 and self.rdlength == 4:
@@ -27,10 +28,18 @@ class DNSResourceRecord:
         elif self.rtype == 28 and self.rclass == 1 and self.rdlength == 16:
             # AAAA record
             return socket.inet_ntop(socket.AF_INET6, self.rdata_raw)
+        elif self.rtype == 12: # PTR record
+            try:
+        # RDATA for PTR is a domain name
+                name, _ = _parse_dns_name(self.rdata_raw, self.full_dns_packet, 0)
+                return name
+            except Exception as e:
+                return f"Invalid PTR RDATA: {self.rdata_raw.hex()} (Error: {e})"
+            
         elif self.rtype == 5:
             # CNAME record
             try:
-                name, _ = _parse_dns_name(self.rdata_raw, self.rdata_raw)
+                name, _ = _parse_dns_name(self.rdata_raw, self.full_dns_packet, 0)
                 return name
             except Exception:
                 return f"Invalid CNAME data: {self.rdata_raw.hex()}"
@@ -44,7 +53,7 @@ class DNSResourceRecord:
     
 def _parse_dns_name(data_segment: bytes, full_data: bytes, initial_offset:int=0) -> tuple[str, int]:
     parts = []
-    offset = initial_offset
+    offset = initial_offset # our "cursor"
     max_jumps = 5  #prevents infinite loops
     jumps_done = 0
     while True:
@@ -77,7 +86,7 @@ def _parse_dns_name(data_segment: bytes, full_data: bytes, initial_offset:int=0)
                 label = label_bytes.decode('ascii', errors='replace')
             parts.append(label)
             offset += length
-    return '.'.join(parts) if parts else ".", offset - initial_offset  
+    return '.'.join(parts) if parts else ".", offset  
 
 class DNSPacket:
     def __init__(self, data: bytes): #data is payload from tcp or udp
@@ -85,7 +94,7 @@ class DNSPacket:
             raise ValueError("DNS packet too short, must be at least 12 bytes")
         self._raw_data = data
         self._raw_header = data[:12]
-        self._payload = data[12:]
+        self._post_header = data[12:]
 
         """qdcount: Number of questions in the question section
         ancount: Number of RRs in the answer section
@@ -121,31 +130,35 @@ class DNSPacket:
 
         #parse questions
         for _ in range(self.qdcount):
-            if current_offset >= len(self._payload):
+            if current_offset >= len(self._post_header):
                 raise ValueError("DNS packet too short for questions section")
-            qname, post_offset= _parse_dns_name(self._payload, self._payload, current_offset)
-            current_offset += post_offset
-            if current_offset + 4 > len(self._payload):
+            # _parse_dns_name takes:
+            # 1. The segment to read the name from (self._post_header)
+            # 2. The *full original DNS packet* (self._raw_data) for pointer context
+            # 3. The offset within the segment to start reading (current_offset_in_data_after_header)
+            qname, post_offset= _parse_dns_name(self._post_header, self._raw_data, current_offset)
+            current_offset = post_offset
+            if current_offset + 4 > len(self._post_header):
                 raise ValueError("DNS packet too short for question type and class")
-            qtype, qclass = struct.unpack('!HH', self._payload[current_offset:current_offset + 4])
+            qtype, qclass = struct.unpack('!HH', self._post_header[current_offset:current_offset + 4])
             current_offset += 4
             self.questions.append(DNSQuery(qname, qtype, qclass))
 
         #parse answers
         for _ in range(self.ancount):
-            if current_offset >= len(self._payload):
+            if current_offset >= len(self._post_header):
                 raise ValueError("DNS packet too short for answers section")
-            name, post_offset = _parse_dns_name(self._payload, self._payload, current_offset)
-            current_offset += post_offset
-            if current_offset + 10 > len(self._payload):
+            name, post_offset = _parse_dns_name(self._post_header, self._raw_data, current_offset)
+            current_offset = post_offset
+            if current_offset + 10 > len(self._post_header):
                 raise ValueError("DNS packet too short for answer type, class, ttl, and rdlength")
-            rtype, rclass, ttl, rdlength = struct.unpack('!HHIH', self._payload[current_offset:current_offset + 10])
+            rtype, rclass, ttl, rdlength = struct.unpack('!HHIH', self._post_header[current_offset:current_offset + 10])
             current_offset += 10
-            if current_offset + rdlength > len(self._payload):
+            if current_offset + rdlength > len(self._post_header):
                 raise ValueError("DNS packet too short for RDATA")
-            rdata_raw = self._payload[current_offset:current_offset + rdlength]
+            rdata_raw = self._post_header[current_offset:current_offset + rdlength]
             current_offset += rdlength
-            self.answers.append(DNSResourceRecord(name, rtype, rclass, ttl, rdlength, rdata_raw))
+            self.answers.append(DNSResourceRecord(name, rtype, rclass, ttl, rdlength, rdata_raw, self._raw_data))
 
     def __str__(self) -> str:
         return (f"DNSPacket(id={self.id}, qr={self.qr}, opcode={self.opcode}, "
