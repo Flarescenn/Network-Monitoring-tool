@@ -21,9 +21,9 @@ The current suite of parsers:
 Other protocols bravely venture into the "Unknown Protocol" category
 
 ### Some additional cool features:
-*   *Top Talkers* Identifies the most active source/destination by bytes
-*   *Protocol Distribution* Breakdown of the traffic
-*   *GeoIP Lookups* Public IPs are mapped to approximate location and ISP/Organization
+*   *Top Talkers:*  Identifies the most active source/destination by bytes
+*   *Protocol Distribution:*    Breakdown of the traffic
+*   *GeoIP Lookups:*    Public IPs are mapped to approximate location and ISP/Organization
 *   *Reverse DNS*
 
 In the future, I do wish to incorporate a web UI (Flask and React) to better visualize this data.
